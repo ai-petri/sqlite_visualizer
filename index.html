@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+ 
+        let tables = [];
+        let isDown = false;
+        let selected;
+        const canvas = document.createElement("canvas");
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+ 
+        canvas.onmousedown = e=>
+        {
+            isDown = true;
+            selected = [...tables].reverse().find(o=> 
+            o.x < e.offsetX &&
+            o.x + o.width > e.offsetX &&
+            o.y < e.offsetY &&
+            o.y + o.height > e.offsetY
+            )
+            tables = [...tables.filter(o=>o!=selected), selected]
+        }
+ 
+        canvas.onmousemove = e=>
+        {
+            if(selected)
+            {
+                selected.x += e.movementX;
+                selected.y += e.movementY;
+            }
+        }
+ 
+        document.onmouseup = e=>
+        {
+            isDown = false;
+            selected = undefined;
+        }
+ 
+        const ctx = canvas.getContext("2d");
+        document.body.append(canvas);
+ 
+        run();
+        async function run()
+        {
+            let response = await fetch("/data");
+            let obj = await response.json();
+ 
+            
+ 
+            let x = 20;
+            let y = 20;
+            for(let tableName of Object.keys(obj))
+            {
+                let table = new Table(ctx,x,y,tableName,obj[tableName]);
+                tables.push(table);
+                x+=20;
+                y+=20;
+            }
+ 
+            animate();
+        }
+ 
+        function animate()
+        {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            for(let table of tables)
+            {
+                table.draw();
+                for(let columnName of Object.keys(table.columns))
+                {
+                    if(table.columns[columnName].references)
+                    {
+                        ctx.beginPath();
+                        ctx.moveTo(table.points[columnName].x + 0.8*table.width, table.points[columnName].y);
+                        let refTable = table.columns[columnName].references.table;
+                        let refColumn = table.columns[columnName].references.column;
+ 
+                        let point = tables.find(o=>o.name == refTable)?.points[refColumn];
+                        if(point) ctx.lineTo(point.x, point.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+
+
+ 
+        function Table(ctx, x, y, name, columns)
+        {
+            console.log(columns)
+            this.ctx = ctx;
+            this.x = x;
+            this.y = y;
+            this.width = 200;
+            this.name = name;
+            this.columns = columns;
+            this.points = {};
+            this.height = 40*(Object.keys(columns).length + 1) + 20;
+ 
+            this.draw = _=>
+            {
+                this.ctx.beginPath();
+                this.ctx.fillStyle = "white";
+                this.ctx.fillRect(this.x, this.y, this.width, this.height);
+                this.ctx.fillStyle = "blue";
+                this.ctx.fillRect(this.x, this.y, this.width, 40);
+                this.ctx.fillStyle = "white";
+                this.ctx.textAlign = "center";
+                this.ctx.textBaseline = "middle";
+                this.ctx.font = "20px Arial"
+                this.ctx.fillText(this.name, this.x+this.width/2, this.y+25);
+                this.ctx.rect(this.x, this.y, this.width, this.height);
+                this.ctx.stroke();
+                let offset = this.y + 25;
+ 
+                for(let columnName of Object.keys(this.columns))
+                {
+                    offset += 40;
+                    this.ctx.fillStyle = "black";
+                    this.ctx.textAlign = "start";
+                    this.ctx.fillText(columnName, this.x + 40, offset);
+                    this.points[columnName] = {x: this.x + 20, y: offset};
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.points[columnName].x, this.points[columnName].y, 4, 0, 2*Math.PI);
+                    this.ctx.fill();
+                }
+ 
+            }
+ 
+            return this;
+        }
+    </script>
+</body>
+</html>
