@@ -95,11 +95,16 @@
  
         function Table(ctx, x, y, name, columns)
         {
-            console.log(columns)
             this.ctx = ctx;
+            this.ctx.font = "15px Arial";
             this.x = x;
             this.y = y;
             this.width = 200;
+            for(let str of [name, ...Object.keys(columns)])
+            {
+                let w = this.ctx.measureText(str).width + 50;
+                this.width = Math.max(this.width, w);
+            }
             this.name = name;
             this.columns = columns;
             this.points = {};
@@ -115,7 +120,6 @@
                 this.ctx.fillStyle = "white";
                 this.ctx.textAlign = "center";
                 this.ctx.textBaseline = "middle";
-                this.ctx.font = "20px Arial"
                 this.ctx.fillText(this.name, this.x+this.width/2, this.y+25);
                 this.ctx.rect(this.x, this.y, this.width, this.height);
                 this.ctx.stroke();
